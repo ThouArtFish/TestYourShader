@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test Your Shader</title>
+<link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+<div id="app">
+  <section id="editorPane" aria-label="Shader code">
+    <div id="tabbar" role="tablist">
+      <button class="tab" role="tab" id="tabVertex" aria-selected="true" aria-controls="vertexEditor">Vertex shader</button>
+      <button class="tab" role="tab" id="tabFragment" aria-selected="false" aria-controls="fragmentEditor">Fragment shader</button>
+      <button id="compile" type="button">Compile</button>
+    </div>
+    <div id="editors">
+      <div id="vertexEditor" class="editor on" role="tabpanel"></div>
+      <div id="fragmentEditor" class="editor" role="tabpanel"></div>
+    </div>
+    <div id="terminal">
+      <div id="termHead">
+        <span>Terminal</span>
+        <button id="termToggle" type="button" aria-expanded="true">Hide</button>
+      </div>
+      <div id="termBody" role="log" aria-live="polite"></div>
+    </div>
+  </section>
+  <div id="divider" role="separator" aria-orientation="vertical" aria-label="Resize panes" tabindex="0"></div>
+  <section id="canvasPane" aria-label="Preview">
+    <canvas id="glcanvas"></canvas>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/ace.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/mode-glsl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.9/theme-tomorrow_night.min.js"></script>
+<script src="scripts/editor.js"></script>
+<script src="scripts/main.js"></script>
+</body>
+</html>
