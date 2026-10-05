@@ -1,3 +1,5 @@
+const gl = gl_canvas.getContext("webgl2");
+
 const vertices = [
     0.577350269, 0.577350269, 0.577350269,
     -0.577350269, 0.577350269, 0.577350269,
@@ -22,7 +24,17 @@ const indices = [
     4, 0, 7,
     3, 7, 0
 ]
-const gl = gl_canvas.getContext("webgl2");
+
+const UNIFORM_SETTERS = {
+  [GL.FLOAT]: (loc, v) => gl.uniform1fv(loc, v), [GL.FLOAT_VEC2]: (loc, v) => gl.uniform2fv(loc, v), 
+  [GL.FLOAT_VEC3]: (loc, v) => gl.uniform3fv(loc, v), [GL.FLOAT_VEC4]: (loc, v) => gl.uniform4fv(loc, v),
+  [GL.INT]: (loc, v) => gl.uniform1iv(loc, v), [GL.INT_VEC2]: (loc, v) => gl.uniform2iv(loc, v), 
+  [GL.INT_VEC3]: (loc, v) => gl.uniform3iv(loc, v), [GL.INT_VEC4]: (loc, v) => gl.uniform4iv(loc, v),
+  [GL.BOOL]: (loc, v) => gl.uniform1iv(loc, v), [GL.BOOL_VEC2]: (loc, v) => gl.uniform2iv(loc, v), 
+  [GL.BOOL_VEC3]: (loc, v) => gl.uniform3iv(loc, v), [GL.BOOL_VEC4]: (loc, v) => gl.uniform4iv(loc, v),
+  [GL.FLOAT_MAT2]: (loc, v) => gl.uniformMatrix2fv(loc, false, v), [GL.FLOAT_MAT3]: (loc, v) => gl.uniformMatrix3fv(loc, false, v), 
+  [GL.FLOAT_MAT4]: (loc, v) => gl.uniformMatrix4fv(loc, false, v)
+};
 
 var object_renderer = null;
 
@@ -35,6 +47,8 @@ if (gl === null) {
 class ObjectRenderer {
   constructor() {
     this.default_program = ObjectRenderer.compileProgram(default_vertex, default_fragment);
+    defineLayout(this.default_program.uniforms, this.default_program.attribs);
+    
     this.current_program = null;
 
     // Create cube 
@@ -65,16 +79,27 @@ class ObjectRenderer {
 
     gl.viewport(0, 0, gl_canvas.clientWidth, gl_canvas.clientHeight);
 
-    const vertex_loc = gl.getAttribLocation((this.current_program == null ? this.default_program : this.current_program), "aPosition");
-    
+    const prog = (this.current_program ? this.current_program : this.default_program);
+    const vertex_loc = gl.getAttribLocation(prog.program, (this.current_program ? window.shaderBench.getSelectedAttrib() : DEFAULT_ATTRIB_NAME));
+    gl.useProgram(prog.program);
+
+    const input_uniforms = window.shaderBench.getUniformValues();
+    for (const uniform of prog.uniforms) {
+      if (!TYPE_INFO[uniform.type]) continue;
+      
+      const loc = gl.getUniformLocation(prog.program, uniform.name);
+      const setter = UNIFORM_SETTERS[uniform.type];
+
+      if (setter) setter(loc, input_uniforms[uniform.name]);
+    }
+
     gl.bindVertexArray(this.vao);
     gl.vertexAttribPointer(vertex_loc, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vertex_loc);
-    gl.useProgram((this.current_program == null ? this.default_program : this.current_program));
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_INT, 0);
-    gl.useProgram(null);
     gl.disableVertexAttribArray(vertex_loc);
     gl.bindVertexArray(null);
+    gl.useProgram(null);
   }
 
   // Function for compiling shader program
@@ -82,9 +107,7 @@ class ObjectRenderer {
     const vertex_shader = ObjectRenderer.compileShader(vertex, gl.VERTEX_SHADER);
     const fragment_shader = ObjectRenderer.compileShader(fragment, gl.FRAGMENT_SHADER);
 
-    if (!vertex_shader || !fragment_shader) {
-      return null;
-    }
+    if (!vertex_shader || !fragment_shader) return null;
 
     const program = gl.createProgram();
     gl.attachShader(program, vertex_shader);
@@ -99,7 +122,18 @@ class ObjectRenderer {
 
     gl.deleteShader(vertex_shader);
     gl.deleteShader(fragment_shader);
-    return program;
+
+    var attribs = [], uniforms = [];
+    const num_attribs = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
+    for (let i = 0; i < num_attribs; i++) {
+      attribs.push(gl.getActiveAttrib(program, i));
+    }
+    const num_uniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < num_uniforms; i++) {
+      uniforms.push(gl.getActiveUniform(program, i));
+    }
+
+    return { program: program, uniforms: uniforms, attribs: attribs };
   }
 
   // Function for compiling shaders
@@ -124,18 +158,23 @@ document.addEventListener("DOMContentLoaded", () => {
   object_renderer.draw();
 });
 
-// Compile shader program and draw with it when compile button is pressed
+// Compile button
 document.getElementById("compile").addEventListener("click", () => {
   const vertex_source = formatSource(window.shaderBench.getVertexSource());
   const fragment_source = formatSource(window.shaderBench.getFragmentSource());
 
   object_renderer.current_program = ObjectRenderer.compileProgram(vertex_source, fragment_source);
 
-  if (object_renderer.current_program) {
+  if (object_renderer.current_program.program) {
     printTerminal("Shader successfully compiled");
     printTerminal("Vertex shader: " + vertex_source.split("\n").length + " lines");
     printTerminal("Fragment shader: " + fragment_source.split("\n").length + " lines");
 
-    object_renderer.draw();
+    defineLayout(object_renderer.current_program.uniforms, object_renderer.current_program.attribs);
   }
+});
+
+// Draw button
+document.getElementById("draw").addEventListener("click", () => {
+  object_renderer.draw();
 });

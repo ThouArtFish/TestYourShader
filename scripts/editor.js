@@ -1,4 +1,4 @@
-const default_vertex = "attribute vec3 aPosition;\n\nmat4 perspective(float fovY, float aspect, float near, float far) {\n    float f = 1.0 / tan(fovY * 0.5);\n    float nf = 1.0 / (near - far);\n    return mat4(\n        f / aspect, 0.0, 0.0,                   0.0,\n        0.0,        f,   0.0,                   0.0,\n        0.0,        0.0, (far + near) * nf,    -1.0,\n        0.0,        0.0, 2.0 * far * near * nf, 0.0\n    );\n}\n\nmat4 lookAt(vec3 eye, vec3 target, vec3 up) {\n    vec3 z = normalize(eye - target);\n    vec3 x = normalize(cross(up, z));\n    vec3 y = cross(z, x);\n    return mat4(\n        x.x,          y.x,          z.x,          0.0,\n        x.y,          y.y,          z.y,          0.0,\n        x.z,          y.z,          z.z,          0.0,\n        -dot(x, eye), -dot(y, eye), -dot(z, eye), 1.0\n    );\n}\n\nvoid main() {\n    mat4 projection = perspective(radians(60.0), 1.0, 0.1, 100.0);\n    mat4 view = lookAt(vec3(-1.0, 2.0, 3.0), vec3(0.0), vec3(0.0, 1.0, 0.0));\n    gl_Position = projection * view * vec4(aPosition, 1.0);\n}\n";
+const default_vertex = "attribute vec4 aPosition;\n\nmat4 perspective(float fovY, float aspect, float near, float far) {\n    float f = 1.0 / tan(fovY * 0.5);\n    float nf = 1.0 / (near - far);\n    return mat4(\n        f / aspect, 0.0, 0.0,                   0.0,\n        0.0,        f,   0.0,                   0.0,\n        0.0,        0.0, (far + near) * nf,    -1.0,\n        0.0,        0.0, 2.0 * far * near * nf, 0.0\n    );\n}\n\nmat4 lookAt(vec3 eye, vec3 target, vec3 up) {\n    vec3 z = normalize(eye - target);\n    vec3 x = normalize(cross(up, z));\n    vec3 y = cross(z, x);\n    return mat4(\n        x.x,          y.x,          z.x,          0.0,\n        x.y,          y.y,          z.y,          0.0,\n        x.z,          y.z,          z.z,          0.0,\n        -dot(x, eye), -dot(y, eye), -dot(z, eye), 1.0\n    );\n}\n\nvoid main() {\n    mat4 projection = perspective(radians(60.0), 1.0, 0.1, 100.0);\n    mat4 view = lookAt(vec3(0.0, 0.0, 3.0), vec3(0.0), vec3(0.0, 1.0, 0.0));\n    gl_Position = projection * view * aPosition;\n}\n";
 const default_fragment = "precision mediump float;\n\nvoid main() {\n    gl_FragColor = vec4(1.0, 0.5, 0.2, 1.0);\n}\n";
 
 function createEditor(el, source) {
@@ -26,8 +26,8 @@ function createEditor(el, source) {
 
 const vertex_editor = createEditor(document.getElementById("vertexEditor"), default_vertex);
 const fragment_editor = createEditor(document.getElementById("fragmentEditor"), default_fragment);
-const tabs = { vertex: document.getElementById("tabVertex"), fragment: document.getElementById("tabFragment") };
-const panels = { vertex: vertex_editor, fragment: fragment_editor };
+const tabs = { vertex: document.getElementById("tabVertex"), fragment: document.getElementById("tabFragment"), layout: document.getElementById("tabLayout") };
+const panels = { vertex: vertex_editor, fragment: fragment_editor, layout: { el: document.getElementById("layoutPanel"), resize: () => {} } };
 
 function showTab(name) {
   for (const key of Object.keys(tabs)) {
@@ -39,6 +39,7 @@ function showTab(name) {
 }
 tabs.vertex.addEventListener("click", () => showTab("vertex"));
 tabs.fragment.addEventListener("click", () => showTab("fragment"));
+tabs.layout.addEventListener("click", () => showTab("layout"));
 
 const app = document.getElementById("app");
 const editor_pane = document.getElementById("editorPane");
@@ -89,15 +90,14 @@ new ResizeObserver(() => {
     gl_canvas.width = w;
     gl_canvas.height = h;
   }
-  object_renderer.draw();
 }).observe(gl_canvas);
 
 const terminal_el = document.getElementById("terminal");
-const terminal_toggle = document.getElementById("termToggle");
-terminal_toggle.addEventListener("click", () => {
+const term_toggle = document.getElementById("termToggle");
+term_toggle.addEventListener("click", () => {
   const hidden = terminal_el.classList.toggle("hidden");
-  terminal_toggle.textContent = hidden ? "Show" : "Hide";
-  terminal_toggle.setAttribute("aria-expanded", String(!hidden));
+  term_toggle.textContent = hidden ? "Show" : "Hide";
+  term_toggle.setAttribute("aria-expanded", String(!hidden));
 });
 
 window.shaderBench = {
@@ -115,8 +115,4 @@ window.shaderBench = {
 
 function printTerminal(text) {
   window.shaderBench.printLine(text);
-}
-
-function formatSource(source) {
-  return source.replace(/\r\n/g, "\n").trim() + "\n";
 }
